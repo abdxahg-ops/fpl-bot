@@ -219,10 +219,20 @@
    "done": true
   },
   "69": {
-   "goals": {},
-   "assists": {},
+   "goals": {
+    "16": [
+     1,
+     "a"
+    ]
+   },
+   "assists": {
+    "13": [
+     1,
+     "a"
+    ]
+   },
    "own": {},
-   "done": false
+   "done": true
   }
  }
 }
