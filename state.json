@@ -175,8 +175,18 @@
    "done": false
   },
   "66": {
-   "goals": {},
-   "assists": {},
+   "goals": {
+    "427": [
+     1,
+     "a"
+    ]
+   },
+   "assists": {
+    "43": [
+     1,
+     "a"
+    ]
+   },
    "own": {},
    "done": false
   }
