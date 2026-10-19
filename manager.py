@@ -29,7 +29,7 @@ SYSTEM = """أنت مدير فريق فانتزي الدوري الإنجليز�
 - خذ بالاعتبار الإصابات، والفورم، وصعوبة المباريات الجاية (FDR 1 سهل، 5 صعب)، ومنافسيه في دوري الأستراحة.
 - الشرائح: اقترح استخدامها بس إذا الوقت مناسب فعلاً، واذكر ليش.
 - استخدم أسماء اللاعبين بالعربي إذا موجودة.
-- الرسالة لا تتجاوز 1500 حرف، واستخدم إيموجي بسيطة وأسطر قصيرة. لا تستخدم markdown مثل ** أو #.
+- الرسالة لا تتجاوز 8000 حرف، واستخدم إيموجي بسيطة وأسطر قصيرة. لا تستخدم markdown مثل ** أو #.
 """
 
 
@@ -52,7 +52,7 @@ def ask_claude(task, data):
     r = requests.post("https://api.anthropic.com/v1/messages",
                       headers={"x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01",
                                "content-type": "application/json"},
-                      json={"model": MODEL, "max_tokens": 1500, "system": SYSTEM,
+                      json={"model": MODEL, "max_tokens": 8000, "system": SYSTEM,
                             "messages": [{"role": "user", "content":
                                           task + "\n\nDATA:\n" + json.dumps(data, ensure_ascii=False)}]},
                       timeout=120)
