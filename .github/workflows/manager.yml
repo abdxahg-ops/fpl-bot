@@ -1,0 +1,43 @@
+name: fpl-manager
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "deadline or summary"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fpl-manager
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Run manager
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FORCE_REPORT: ${{ github.event.inputs.force }}
+          FPL_ENTRY: "53586"
+          FPL_LEAGUE: "1065708"
+        run: python manager.py
+      - name: Save state
+        run: |
+          git config user.name "fpl-manager"
+          git config user.email "bot@users.noreply.github.com"
+          git add manager_state.json
+          git diff --staged --quiet || (git commit -m "manager state" && git pull --rebase && git push)
