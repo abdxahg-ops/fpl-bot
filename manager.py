@@ -10,9 +10,9 @@ ENTRY = int(os.environ.get("FPL_ENTRY", "53586"))
 LEAGUE = int(os.environ.get("FPL_LEAGUE", "1065708"))
 TG_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TG_CHAT = os.environ.get("TELEGRAM_CHAT_ID", "")
-CLAUDE_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+CLAUDE_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5")
-FORCE = os.environ.get("FORCE_REPORT", "")
+FORCE = os.environ.get("FORCE_REPORT", "").strip().lower()
 STATE_FILE = "manager_state.json"
 H = {"User-Agent": "Mozilla/5.0 (fpl manager)"}
 POS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -41,8 +41,9 @@ def send(text):
     if not TG_TOKEN:
         print("---- MESSAGE ----\n" + text + "\n"); return
     for i in range(0, len(text), 4000):
-        requests.post(f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
-                      json={"chat_id": TG_CHAT, "text": text[i:i + 4000]}, timeout=30)
+        r = requests.post(f"https://api.telegram.org/bot{TG_TOKEN.strip()}/sendMessage",
+                          json={"chat_id": TG_CHAT.strip(), "text": text[i:i + 4000]}, timeout=30)
+        print("TELEGRAM:", r.status_code, r.text[:200])
 
 
 def ask_claude(task, data):
@@ -55,8 +56,9 @@ def ask_claude(task, data):
                             "messages": [{"role": "user", "content":
                                           task + "\n\nDATA:\n" + json.dumps(data, ensure_ascii=False)}]},
                       timeout=120)
+    print("CLAUDE:", r.status_code)
     if r.status_code != 200:
-        print("Claude error:", r.status_code, r.text[:300]); return None
+        print("Claude error:", r.text[:300]); return None
     return "".join(c.get("text", "") for c in r.json().get("content", []))
 
 
@@ -135,6 +137,7 @@ def build_data(b, P, T, gw_for_picks, next_gw):
 
 
 def main():
+    print("FORCE:", repr(FORCE), "| TG token:", len(TG_TOKEN), "| chat:", len(TG_CHAT), "| claude key:", len(CLAUDE_KEY))
     st = load()
     b = get("bootstrap-static/")
     P = {p["id"]: p for p in b["elements"]}
