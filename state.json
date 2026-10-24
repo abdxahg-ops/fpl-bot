@@ -344,7 +344,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "74": {
    "goals": {
@@ -360,7 +360,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   }
  }
 }
