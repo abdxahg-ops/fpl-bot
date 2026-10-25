@@ -111,6 +111,16 @@ def main():
     start = time.time()
     while time.time() - start < MAX_MINUTES * 60:
         fixtures = get(f"fixtures/?event={gw}")
+        # بطاقة نهاية المباراة (بصور اللاعبين) لأي مباراة خلصت خلال آخر 3 ساعات
+        for f in fixtures:
+            key = f"ft-{f['id']}"
+            if f["finished_provisional"] and key not in state["seen"] and recently_finished(f):
+                try:
+                    if post_full_time(f, gw, players, teams):
+                        state["seen"].append(key)
+                        save_state(state)
+                except Exception as err:
+                    print("خطأ في بطاقة النهاية:", err)
         if not window_active(fixtures, time.time()):
             print("ما فيه مباريات شغالة")
             break
