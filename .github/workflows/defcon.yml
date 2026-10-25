@@ -1,0 +1,37 @@
+name: defcon-bot
+
+on:
+  schedule:
+    - cron: "5 11-21 * * *"   # كل ساعة من 2:05 الظهر لين 12:05 بالليل بتوقيت السعودية
+  workflow_dispatch:            # تشغيل يدوي للتجربة
+
+permissions:
+  contents: write
+
+concurrency:
+  group: defcon-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Run DEF CON bot
+        env:
+          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+          TYPEFULLY_SOCIAL_SET_ID: "346034"
+          DRY_RUN: ${{ vars.DEFCON_DRY_RUN || '0' }}
+        run: python defcon.py
+      - name: Save state
+        if: always()
+        run: |
+          git config user.name "fpl-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add defcon_state.json || true
+          git diff --staged --quiet || (git commit -m "defcon state" && git pull --rebase && git push)
