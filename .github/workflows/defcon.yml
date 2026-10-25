@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install requests
+      - run: pip install requests playwright
       - name: Run DEF CON bot
         env:
           TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
@@ -33,5 +33,6 @@ jobs:
         run: |
           git config user.name "fpl-bot"
           git config user.email "bot@users.noreply.github.com"
+          rm -f ft_*.png
           git add defcon_state.json || true
           git diff --staged --quiet || (git commit -m "defcon state" && git pull --rebase && git push)
