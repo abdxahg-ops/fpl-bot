@@ -2,7 +2,7 @@ name: news-bot
 
 on:
   schedule:
-    - cron: "35 */2 * * *"   # كل ساعتين: تغير الأسعار + الإصابات
+    - cron: "35 */2 * * *"   # كل ساعتين: تغير الأسعار + الإصابات + أرقام نهاية الجولة
   workflow_dispatch:
 
 permissions:
@@ -27,11 +27,14 @@ jobs:
           TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
           TYPEFULLY_SOCIAL_SET_ID: "346034"
           DRY_RUN: ${{ vars.NEWS_DRY_RUN || '0' }}
-        run: python news.py
+        run: |
+          python news.py
+          python gw_stats.py
       - name: Save state
         if: always()
         run: |
           git config user.name "fpl-bot"
           git config user.email "bot@users.noreply.github.com"
           git add news_state.json || true
+          git add gw_stats_state.json || true
           git diff --staged --quiet || (git commit -m "news state" && git pull --rebase && git push)
