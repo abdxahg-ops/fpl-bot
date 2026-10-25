@@ -142,8 +142,52 @@ def main():
             if tweet(text):
                 state["seen"] += [k for k, _, _ in items]
                 save_state(state)
+
+        # البونص المتوقع في الدقيقة 60 و80
+        for f in fixtures:
+            if not f["started"] or f["finished_provisional"]:
+                continue
+            for mark in BONUS_MARKS:
+                key = f"bonus{mark}-{f['id']}"
+                if f["minutes"] >= mark and key not in state["seen"]:
+                    text = bonus_tweet(f, mark, players, teams)
+                    if text and tweet(text):
+                        state["seen"].append(key)
+                        save_state(state)
         time.sleep(POLL_SECONDS)
     save_state(state)
+
+
+BONUS_MARKS = (60, 80)
+
+
+def provisional_bonus(fixture):
+    """يحسب البونص من نقاط BPS بنفس قانون الفانتزي (التعادل ياخذون نفس النقاط)."""
+    bps = []
+    for s in fixture["stats"]:
+        if s["identifier"] == "bps":
+            bps = s["h"] + s["a"]
+    bps.sort(key=lambda x: -x["value"])
+    out = []
+    for p in bps:
+        rank = 1 + sum(1 for q in bps if q["value"] > p["value"])
+        if rank > 3:
+            break
+        out.append((p["element"], 4 - rank, p["value"]))
+    return out
+
+
+def bonus_tweet(f, mark, players, teams):
+    bonus = provisional_bonus(f)
+    if not bonus:
+        return None
+    home, away = teams[f["team_h"]], teams[f["team_a"]]
+    score = f'{TEAMS_AR.get(home, home)} {f["team_h_score"] or 0}-{f["team_a_score"] or 0} {TEAMS_AR.get(away, away)}'
+    lines = []
+    for pid, pts, _ in bonus:
+        name = players[pid]["web_name"]
+        lines.append(f"{'🥇🥈🥉'[3 - pts]} {PLAYERS_AR.get(name, name)} +{pts}")
+    return f"⭐ | البونص المتوقع (د{mark})\n\n" + "\n".join(lines) + f"\n\n{score}\n\n#FPL #الفانتزي"
 
 
 if __name__ == "__main__":
