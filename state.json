@@ -405,7 +405,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "76": {
    "goals": {
@@ -429,7 +429,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "78": {
    "goals": {
@@ -454,7 +454,7 @@
      "a"
     ]
    },
-   "done": false
+   "done": true
   },
   "79": {
    "goals": {
@@ -486,7 +486,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   }
  }
 }
