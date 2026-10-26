@@ -4,6 +4,7 @@
 2) نتيجة الكابتنية: الكابتن الأكثر اختياراً كم جاب، ومين أفضل كابتن
 3) مقارنة صادمة: لاعب رخيص جاب نقاط أكثر من لاعب غالي
 """
+import datetime
 import json
 import os
 
@@ -35,14 +36,14 @@ def get(path):
     return requests.get(f"{API}/{path}", timeout=30).json()
 
 
-def tweet(text):
+def tweet(text, when="now"):
     if DRY_RUN or not TYPEFULLY_KEY:
         print("---- (تجربة) ----\n" + text + "\n")
         return True
     r = requests.post(
         f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
         headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
-        json={"platforms": {"x": {"enabled": True, "posts": [{"text": text}]}}, "publish_at": "now"},
+        json={"platforms": {"x": {"enabled": True, "posts": [{"text": text}]}}, "publish_at": when},
         timeout=30,
     )
     print("نشر:", r.status_code, text.splitlines()[0])
@@ -137,7 +138,12 @@ def main():
                 f"فرق السعر {price(e) - price(c):.1f} مليون 👀\n\n#FPL #الفانتزي"
             )
 
-    ok = all(tweet(t) for t in tweets)
+    # تنزل بفرق ساعة بين كل تغريدة والثانية (Typefully يجدولها)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    ok = all(
+        tweet(t, "now" if i == 0 else (now + datetime.timedelta(hours=i)).isoformat(timespec="seconds"))
+        for i, t in enumerate(tweets)
+    )
     if ok and not FORCE:
         state["done"].append(gw)
         with open(STATE_FILE, "w") as f:
