@@ -19,13 +19,16 @@ FALLBACK = (
 
 
 def photo_url(player):
-    """رابط صورة اللاعب، وإذا ما لها صورة (لاعب جديد) نحط شكل بديل."""
-    url = PHOTO.format(code=player["code"])
-    try:
-        if requests.head(url, timeout=10).status_code == 200:
-            return url
-    except Exception:
-        pass
+    """صورة اللاعب بلبس هالموسم، وإذا ما لقيناها نجرب الصورة القديمة، وآخر شي شكل بديل."""
+    for url in (
+        f"https://resources.premierleague.com/premierleague25/photos/players/110x140/{player['code']}.png",
+        PHOTO.format(code=player["code"]),
+    ):
+        try:
+            if requests.head(url, timeout=10).status_code == 200:
+                return url
+        except Exception:
+            pass
     return FALLBACK
 
 

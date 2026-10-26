@@ -54,7 +54,7 @@ def status_text(p):
     if s == "a":
         return "🟢", "جاهز"
     if s == "d":
-        return "🟡", f"شك {chance}%" if chance is not None else "شك"
+        return "🟡", f"نسبة المشاركة {chance}%" if chance is not None else "غير مؤكد يلعب"
     if s == "s":
         return "🔴", "موقوف"
     if s == "i":
