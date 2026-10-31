@@ -49,9 +49,37 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False)
 
 
+def dedupe_key(text):
+    """أول سطرين من التغريدة (العنوان + أول لاعب/الفريقين) بدون أرقام النتيجة اللي تتغير."""
+    import re
+    lines = [re.sub(r"\d+-\d+", "-", l.strip()) for l in text.splitlines() if l.strip() and "#" not in l]
+    return " ".join(lines[:2])[:40]
+
+
+def already_posted(text):
+    """يتأكد من Typefully إن نفس التغريدة ما انتشرت قبل (لو اشتغل البوت مرتين بنفس الوقت)."""
+    try:
+        r = requests.get(
+            f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
+            headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
+            params={"limit": 40, "order_by": "-created_at"},
+            timeout=30,
+        )
+        key = dedupe_key(text)
+        for d in r.json().get("results", []):
+            if d.get("status") in ("published", "publishing", "scheduled") and dedupe_key(d.get("preview") or "") == key:
+                print("مكررة، ما نشرتها:", key)
+                return True
+    except Exception as e:
+        print("تحقق التكرار فشل:", e)
+    return False
+
+
 def tweet(text):
     if DRY_RUN or not TYPEFULLY_KEY:
         print("---- (تجربة) ----\n" + text + "\n")
+        return True
+    if already_posted(text):
         return True
     r = requests.post(
         f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
@@ -252,6 +280,8 @@ def post_full_time(f, gw, players, teams):
 
     if DRY_RUN or not TYPEFULLY_KEY:
         print("---- (تجربة: بطاقة النهاية", path, ") ----\n" + text)
+        return True
+    if already_posted(text):
         return True
     media_id = cards.upload_media(path, SOCIAL_SET_ID, TYPEFULLY_KEY)
     r = requests.post(
