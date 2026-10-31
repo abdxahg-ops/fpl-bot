@@ -104,6 +104,7 @@ def live_fixture_points(gw):
                 "pts": sum(s["points"] for s in ex["stats"]),
                 "goals": st.get("goals_scored", {}).get("value", 0),
                 "assists": st.get("assists", {}).get("value", 0),
+                "stats": ex["stats"],
             }
     return out
 
@@ -131,14 +132,21 @@ def hauls_tick(gw, fx, players, teams, state):
         team = TEAMS_AR.get(teams[p["team"]], teams[p["team"]])
         home, away = teams[f["team_h"]], teams[f["team_a"]]
         score = f'{TEAMS_AR.get(home, home)} {f["team_h_score"] or 0}-{f["team_a_score"] or 0} {TEAMS_AR.get(away, away)}'
-        detail = []
-        if v["goals"]:
-            detail.append(f"⚽ {v['goals']} أهداف" if v["goals"] >= 3 else ("⚽ هدفين" if v["goals"] == 2 else "⚽ هدف"))
-        if v["assists"]:
-            detail.append("🅰️ أسيست" if v["assists"] == 1 else ("🅰️ أسيستين" if v["assists"] == 2 else f"🅰️ {v['assists']} أسيست"))
-        head = "🎩 | هاتريك!" if v["goals"] >= 3 else "🔥 | نقاط كبيرة!"
-        text = (f"{head}\n\n{ar_name(players, pid)} ({team}) وصل {v['pts']} نقطة"
-                + (f"\n{' | '.join(detail)}" if detail else "")
+        labels = {
+            "goals_scored": "⚽ {v} أهداف" if v["goals"] >= 3 else ("⚽ هدفين" if v["goals"] == 2 else "⚽ هدف"),
+            "assists": "🅰️ أسيست" if v["assists"] == 1 else ("🅰️ أسيستين" if v["assists"] == 2 else "🅰️ {v} أسيست"),
+            "clean_sheets": "🧤 كلين شيت", "bonus": "⭐ أفضلية", "defensive_contribution": "🛡️ نقاط دفاع",
+            "saves": "🧤 تصديات", "penalties_saved": "🧤 صد بلنتي", "minutes": "⏱️ دقائق اللعب",
+            "goals_conceded": "🥅 أهداف دخلت", "yellow_cards": "🟨 بطاقة صفراء", "red_cards": "🟥 طرد",
+            "own_goals": "❌ هدف عكسي", "penalties_missed": "❌ ضيّع بلنتي",
+        }
+        order = ["goals_scored", "assists", "clean_sheets", "bonus", "defensive_contribution", "saves",
+                 "penalties_saved", "minutes", "goals_conceded", "yellow_cards", "red_cards", "own_goals", "penalties_missed"]
+        st = {x["identifier"]: x for x in v["stats"] if x["points"]}
+        detail = [f"{labels.get(k, k).format(v=st[k]['value'])} ({st[k]['points']:+d})" for k in order if k in st]
+        head = "🎩 | هاتريك! 🔥🔥🔥" if v["goals"] >= 3 else "🔥🔥🔥"
+        text = (f"{head}\n\n{ar_name(players, pid)} ({team}) وصل {v['pts']} نقطة\n\n"
+                + "\n".join(detail)
                 + f"\n\n{score}\n\n#FPL #الفانتزي")
         if tweet(text):
             state["seen"] += [hat_key] + ([haul_key] if v["pts"] >= HAUL_POINTS else [])
