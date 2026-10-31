@@ -185,32 +185,7 @@ def tick(gw, players, teams, state):
         print("ما فيه مباريات شغالة")
         return False
     fx = {f["id"]: f for f in fixtures}
-    try:
-        new = {k: v for k, v in achievements(gw).items() if k not in state["seen"]}
-    except Exception as err:  # نكمل حتى لو صار خطأ مؤقت
-        print("خطأ:", err)
-        return True
-
-    by_fixture = {}
-    for key, pts in new.items():
-        pid, fid = map(int, key.split("-"))
-        if fx[fid]["finished_provisional"]:  # مباراة خلصت قبل ما نشتغل: ما نغرد عنها متأخر
-            state["seen"].append(key)
-            continue
-        by_fixture.setdefault(fid, []).append((key, pid, pts))
-
-    for fid, items in by_fixture.items():
-        f = fx[fid]
-        home, away = teams[f["team_h"]], teams[f["team_a"]]
-        score = f'{TEAMS_AR.get(home, home)} {f["team_h_score"] or 0}-{f["team_a_score"] or 0} {TEAMS_AR.get(away, away)}'
-        lines = []
-        for _, pid, pts in items:
-            name = players[pid]["web_name"]
-            lines.append(f"🛡️ {PLAYERS_AR.get(name, name)} (+{pts})")
-        text = "✅ | نقاط الدفاع DEF CON\n\n" + "\n".join(lines) + f"\n\n{score}\n\n#FPL #الفانتزي"
-        if tweet(text):
-            state["seen"] += [k for k, _, _ in items]
-            save_state(state)
+    # نقاط الدفاع DEF CON صارت داخل تغريدة نهاية المباراة (ما ننشرها لايف) — طلب المستخدم 31 أكتوبر
 
     # تنبيه الهاتريك والنقاط الكبيرة
     hauls_tick(gw, fx, players, teams, state)
@@ -229,7 +204,7 @@ def tick(gw, players, teams, state):
     return True
 
 
-BONUS_MARKS = (60, 80)
+BONUS_MARKS = ()  # البونص المتوقع ملغي (طلب المستخدم 31 أكتوبر)
 
 
 def recently_finished(f):
@@ -290,8 +265,14 @@ def post_full_time(f, gw, players, teams):
     if assists:
         lines.append("🅰️ الأسيست: " + "، ".join(assists))
     lines += ["", "📊 نقاط الفانتزي:"] + [f"{n} {p}" for n, p, _ in top]
+    try:
+        dc = [ar_name(players, int(k.split("-")[0])) for k in achievements(gw) if int(k.split("-")[1]) == f["id"]]
+    except Exception:
+        dc = []
     if bonus:
         lines += ["", "⭐ البونص: " + " | ".join(bonus)]
+    if dc:
+        lines.append("🛡️ نقاط الدفاع: " + "، ".join(dc))
     if reds:
         lines.append("🟥 الطرد: " + "، ".join(reds))
     if yellows:
