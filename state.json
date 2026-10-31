@@ -520,6 +520,10 @@
   },
   "82": {
    "goals": {
+    "77": [
+     1,
+     "h"
+    ],
     "79": [
      1,
      "h"
@@ -529,10 +533,14 @@
     "70": [
      1,
      "h"
+    ],
+    "78": [
+     1,
+     "h"
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "83": {
    "goals": {
@@ -557,7 +565,7 @@
      "a"
     ]
    },
-   "done": false
+   "done": true
   },
   "85": {
    "goals": {
@@ -589,7 +597,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "86": {
    "goals": {
@@ -629,7 +637,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   },
   "88": {
    "goals": {
@@ -645,7 +653,7 @@
     ]
    },
    "own": {},
-   "done": false
+   "done": true
   }
  }
 }
