@@ -676,8 +676,18 @@
    "done": true
   },
   "81": {
-   "goals": {},
-   "assists": {},
+   "goals": {
+    "166": [
+     1,
+     "h"
+    ]
+   },
+   "assists": {
+    "53": [
+     1,
+     "h"
+    ]
+   },
    "own": {},
    "done": false
   }
