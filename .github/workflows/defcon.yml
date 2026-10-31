@@ -28,7 +28,7 @@ jobs:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           TYPEFULLY_SOCIAL_SET_ID: "346034"
           DRY_RUN: ${{ vars.DEFCON_DRY_RUN || '0' }}
-        run: python defcon.py
+        run: python -u defcon.py
       - name: Save state
         if: always()
         run: |

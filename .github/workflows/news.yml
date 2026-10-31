@@ -29,8 +29,8 @@ jobs:
           TYPEFULLY_SOCIAL_SET_ID: "346034"
           DRY_RUN: ${{ vars.NEWS_DRY_RUN || '0' }}
         run: |
-          python news.py
-          python gw_stats.py
+          python -u news.py
+          python -u gw_stats.py
       - name: Save state
         if: always()
         run: |
