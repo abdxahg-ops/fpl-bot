@@ -91,6 +91,60 @@ def achievements(gw):
     return out
 
 
+HAUL_POINTS = 15
+
+
+def live_fixture_points(gw):
+    """لكل (لاعب، مباراة): النقاط والأهداف والأسيست وقت المباراة."""
+    out = {}
+    for e in get(f"event/{gw}/live/")["elements"]:
+        for ex in e["explain"]:
+            st = {s["identifier"]: s for s in ex["stats"]}
+            out[(e["id"], ex["fixture"])] = {
+                "pts": sum(s["points"] for s in ex["stats"]),
+                "goals": st.get("goals_scored", {}).get("value", 0),
+                "assists": st.get("assists", {}).get("value", 0),
+            }
+    return out
+
+
+def hauls_tick(gw, fx, players, teams, state):
+    """تنبيه الهاتريك واللاعب اللي يوصل 15 نقطة أو أكثر وقت المباراة."""
+    try:
+        live = live_fixture_points(gw)
+    except Exception as err:
+        print("خطأ في النقاط المباشرة:", err)
+        return
+    for (pid, fid), v in live.items():
+        f = fx.get(fid)
+        if not f or not f["started"]:
+            continue
+        hat_key, haul_key = f"hat-{pid}-{fid}", f"haul-{pid}-{fid}"
+        is_hat = v["goals"] >= 3 and hat_key not in state["seen"]
+        is_haul = v["pts"] >= HAUL_POINTS and haul_key not in state["seen"]
+        if not (is_hat or is_haul):
+            continue
+        if f["finished_provisional"] and not recently_finished(f):  # قديمة: ما نغرد متأخر
+            state["seen"] += [hat_key, haul_key]
+            continue
+        p = players[pid]
+        team = TEAMS_AR.get(teams[p["team"]], teams[p["team"]])
+        home, away = teams[f["team_h"]], teams[f["team_a"]]
+        score = f'{TEAMS_AR.get(home, home)} {f["team_h_score"] or 0}-{f["team_a_score"] or 0} {TEAMS_AR.get(away, away)}'
+        detail = []
+        if v["goals"]:
+            detail.append(f"⚽ {v['goals']} أهداف" if v["goals"] >= 3 else ("⚽ هدفين" if v["goals"] == 2 else "⚽ هدف"))
+        if v["assists"]:
+            detail.append("🅰️ أسيست" if v["assists"] == 1 else ("🅰️ أسيستين" if v["assists"] == 2 else f"🅰️ {v['assists']} أسيست"))
+        head = "🎩 | هاتريك!" if v["goals"] >= 3 else "🔥 | نقاط كبيرة!"
+        text = (f"{head}\n\n{ar_name(players, pid)} ({team}) وصل {v['pts']} نقطة"
+                + (f"\n{' | '.join(detail)}" if detail else "")
+                + f"\n\n{score}\n\n#FPL #الفانتزي")
+        if tweet(text):
+            state["seen"] += [hat_key] + ([haul_key] if v["pts"] >= HAUL_POINTS else [])
+            save_state(state)
+
+
 def main():
     bootstrap = get("bootstrap-static/")
     gw = current_gw(bootstrap)
@@ -157,6 +211,9 @@ def tick(gw, players, teams, state):
         if tweet(text):
             state["seen"] += [k for k, _, _ in items]
             save_state(state)
+
+    # تنبيه الهاتريك والنقاط الكبيرة
+    hauls_tick(gw, fx, players, teams, state)
 
     # البونص المتوقع في الدقيقة 60 و80
     for f in fixtures:
