@@ -25,6 +25,7 @@ jobs:
       - name: Run news bot
         env:
           TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           TYPEFULLY_SOCIAL_SET_ID: "346034"
           DRY_RUN: ${{ vars.NEWS_DRY_RUN || '0' }}
         run: |
