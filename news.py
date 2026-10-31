@@ -1,7 +1,7 @@
 """
 بوت الأخبار لحساب @fanFpl11 — يشتغل كل ساعتين:
 - تغير الأسعار (يرصد أي لاعب ارتفع أو نزل سعره من آخر مرة)
-- الإصابات الجديدة (أي لاعب تغير وضعه في الفانتزي: شك، مصاب، موقوف، أو رجع جاهز)
+- الإصابات: تتجمع وتنزل تغريدة وحدة باليوم؛ ووقت الجولة الشغالة بس الإصابات الجديدة
 """
 import json
 import os
@@ -75,6 +75,61 @@ def chunks(header, lines, footer="\n\n#FPL #الفانتزي", limit=3500):
     return posts
 
 
+INJ_STATE = "injuries_state.json"
+POST_HOUR_KSA = 20  # تتجمع الإصابات طول اليوم وتنزل تغريدة وحدة بعد هالساعة
+
+
+def gw_in_progress(data):
+    """فيه جولة شغالة؟ (بدت مبارياتها وما خلصت)"""
+    for e in data["events"]:
+        if e["is_current"] and not e["finished"]:
+            fx = requests.get(f"https://fantasy.premierleague.com/api/fixtures/?event={e['id']}", timeout=30).json()
+            return any(f["started"] for f in fx)
+    return False
+
+
+def injury_daily(data, players, teams, now):
+    from datetime import datetime, timedelta, timezone
+    ksa = datetime.now(timezone.utc) + timedelta(hours=3)
+    today = ksa.strftime("%Y-%m-%d")
+    cur = {pid: [v["status"], v["chance"]] for pid, v in now.items()}
+    if not os.path.exists(INJ_STATE):
+        with open(INJ_STATE, "w") as f:
+            json.dump({"date": today, "base": cur}, f)
+        print("الإصابات: أول تشغيل، حفظت الوضع")
+        return
+    with open(INJ_STATE) as f:
+        st = json.load(f)
+    if st.get("date") == today or ksa.hour < POST_HOUR_KSA:
+        print("الإصابات: مو وقت التغريدة اليومية")
+        return
+    base = st["base"]
+    only_new = gw_in_progress(data)  # وقت المباريات: الإصابات الجديدة بس
+    changes = []
+    for pid, (status, chance) in cur.items():
+        prev = base.get(pid)
+        if not prev or prev == [status, chance]:
+            continue
+        p = players[pid]
+        if float(p["selected_by_percent"]) < MIN_OWNERSHIP or status == "u":
+            continue
+        if only_new and not (prev[0] == "a" and status in ("d", "i", "s")):
+            continue
+        icon, text = status_text(p)
+        changes.append((float(p["selected_by_percent"]), f"{icon} {label(p, teams)} — {text}"))
+    ok = True
+    if changes:
+        lines = [l for _, l in sorted(changes, reverse=True)]
+        header = "🚑 | إصابات جديدة\n\n" if only_new else "🚑 | تحديث الإصابات اليومي\n\n"
+        for post in chunks(header, lines):
+            ok = tweet(post) and ok
+    else:
+        print("الإصابات: ما فيه جديد اليوم")
+    if ok:
+        with open(INJ_STATE, "w") as f:
+            json.dump({"date": today, "base": cur}, f)
+
+
 def main():
     data = requests.get("https://fantasy.premierleague.com/api/bootstrap-static/", timeout=30).json()
     teams = {t["id"]: t["short_name"] for t in data["teams"]}
@@ -112,32 +167,14 @@ def main():
         for post in chunks("💰 | تغير الأسعار\n\n", lines):
             price_ok = tweet(post) and price_ok
 
-    # الإصابات
-    changes = []
-    for pid, cur in now.items():
-        prev = old.get(pid)
-        if not prev or (prev["status"], prev["chance"]) == (cur["status"], cur["chance"]):
-            continue
-        p = players[pid]
-        if float(p["selected_by_percent"]) < MIN_OWNERSHIP:
-            continue
-        if cur["status"] == "u":  # لاعب انتقل لنادي برا الدوري: نتجاهله
-            continue
-        icon, text = status_text(p)
-        changes.append((float(p["selected_by_percent"]), f"{icon} {label(p, teams)} — {text}"))
-    injury_ok = True
-    if changes:
-        lines = [l for _, l in sorted(changes, reverse=True)]
-        for post in chunks("🚑 | تحديث الإصابات\n\n", lines):
-            injury_ok = tweet(post) and injury_ok
+    # الإصابات: تغريدة وحدة باليوم (بعد الساعة 8 المسا بتوقيت السعودية)
+    injury_daily(data, players, teams, now)
 
     # نحفظ الوضع الجديد بس إذا النشر نجح (عشان ما يضيع خبر)
     for pid, cur in now.items():
         prev = old.get(pid, cur)
         if not price_ok:
             cur["cost"] = prev["cost"]
-        if not injury_ok:
-            cur["status"], cur["chance"] = prev["status"], prev["chance"]
     with open(SNAPSHOT, "w") as f:
         json.dump(now, f)
 
