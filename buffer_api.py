@@ -12,9 +12,14 @@ API = "https://api.buffer.com"
 
 
 def _gql(query, variables=None):
-    r = requests.post(API, headers={"Authorization": f"Bearer {KEY}"},
+    r = requests.post(API, headers={"Authorization": f"Bearer {KEY}", "Content-Type": "application/json",
+                                    "User-Agent": "fanFpl11-bot/1.0"},
                       json={"query": query, "variables": variables or {}}, timeout=60)
-    return r.json()
+    try:
+        return r.json()
+    except ValueError:
+        print("Buffer رد غريب:", r.status_code, r.text[:300], flush=True)
+        raise
 
 
 def _key(text):
