@@ -10,6 +10,8 @@ import time
 
 import requests
 
+import buffer_api
+
 TYPEFULLY_KEY = os.environ.get("TYPEFULLY_API_KEY", "")
 SOCIAL_SET_ID = os.environ.get("TYPEFULLY_SOCIAL_SET_ID", "346034")
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
@@ -49,46 +51,11 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False)
 
 
-def dedupe_key(text):
-    """أول سطرين من التغريدة (العنوان + أول لاعب/الفريقين) بدون أرقام النتيجة اللي تتغير."""
-    import re
-    lines = [re.sub(r"\d+-\d+", "-", l.strip()) for l in text.splitlines() if l.strip() and "#" not in l]
-    return " ".join(lines[:2])[:40]
-
-
-def already_posted(text):
-    """يتأكد من Typefully إن نفس التغريدة ما انتشرت قبل (لو اشتغل البوت مرتين بنفس الوقت)."""
-    try:
-        r = requests.get(
-            f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
-            headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
-            params={"limit": 40, "order_by": "-created_at"},
-            timeout=30,
-        )
-        key = dedupe_key(text)
-        for d in r.json().get("results", []):
-            if d.get("status") in ("published", "publishing", "scheduled") and dedupe_key(d.get("preview") or "") == key:
-                print("مكررة، ما نشرتها:", key)
-                return True
-    except Exception as e:
-        print("تحقق التكرار فشل:", e)
-    return False
-
-
 def tweet(text):
-    if DRY_RUN or not TYPEFULLY_KEY:
+    if DRY_RUN or not buffer_api.KEY:
         print("---- (تجربة) ----\n" + text + "\n")
         return True
-    if already_posted(text):
-        return True
-    r = requests.post(
-        f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
-        headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
-        json={"platforms": {"x": {"enabled": True, "posts": [{"text": text}]}}, "publish_at": "now"},
-        timeout=30,
-    )
-    print("نشر:", r.status_code, text.splitlines()[2] if len(text.splitlines()) > 2 else "")
-    return r.status_code < 300
+    return buffer_api.post(text)
 
 
 def current_gw(bootstrap):
@@ -278,20 +245,13 @@ def post_full_time(f, gw, players, teams):
     page = cards.ft_card_html(hs, as_, home_ar, away_ar, goals, assists, top, bonus, card_items)
     path = cards.render_png(page, f"ft_{f['id']}.png")
 
-    if DRY_RUN or not TYPEFULLY_KEY:
+    if DRY_RUN or not buffer_api.KEY:
         print("---- (تجربة: بطاقة النهاية", path, ") ----\n" + text)
         return True
-    if already_posted(text):
+    if buffer_api.already_posted(text):
         return True
-    media_id = cards.upload_media(path, SOCIAL_SET_ID, TYPEFULLY_KEY)
-    r = requests.post(
-        f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
-        headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
-        json={"platforms": {"x": {"enabled": True, "posts": [{"text": text, "media_ids": [media_id]}]}}, "publish_at": "now"},
-        timeout=30,
-    )
-    print("نشر بطاقة النهاية:", r.status_code, home, away)
-    return r.status_code < 300
+    url = cards.host_image(path, SOCIAL_SET_ID, TYPEFULLY_KEY)
+    return buffer_api.post(text, [url] if url else [], dedupe=False)
 
 
 def provisional_bonus(fixture):

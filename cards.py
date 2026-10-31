@@ -134,3 +134,16 @@ def upload_media(path, social_set_id, key):
             break
         time.sleep(2)
     return media_id
+
+
+def host_image(path, social_set_id, key):
+    """يرفع الصورة لـ Typefully (مجاني) ويرجع رابط عام لها عشان Buffer ياخذها."""
+    try:
+        media_id = upload_media(path, social_set_id, key)
+        s = requests.get(
+            f"https://api.typefully.com/v2/social-sets/{social_set_id}/media/{media_id}",
+            headers={"Authorization": f"Bearer {key}"}, timeout=30).json()
+        return (s.get("media_urls") or {}).get("original")
+    except Exception as e:
+        print("رفع الصورة فشل:", e)
+        return None

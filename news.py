@@ -8,6 +8,8 @@ import os
 
 import requests
 
+import buffer_api
+
 TYPEFULLY_KEY = os.environ.get("TYPEFULLY_API_KEY", "")
 SOCIAL_SET_ID = os.environ.get("TYPEFULLY_SOCIAL_SET_ID", "346034")
 DRY_RUN = os.environ.get("DRY_RUN", "0") == "1"
@@ -30,17 +32,10 @@ except FileNotFoundError:
 
 
 def tweet(text):
-    if DRY_RUN or not TYPEFULLY_KEY:
+    if DRY_RUN or not buffer_api.KEY:
         print("---- (تجربة) ----\n" + text + "\n")
         return True
-    r = requests.post(
-        f"https://api.typefully.com/v2/social-sets/{SOCIAL_SET_ID}/drafts",
-        headers={"Authorization": f"Bearer {TYPEFULLY_KEY}"},
-        json={"platforms": {"x": {"enabled": True, "posts": [{"text": text}]}}, "publish_at": "now"},
-        timeout=30,
-    )
-    print("نشر:", r.status_code, text.splitlines()[0])
-    return r.status_code < 300
+    return buffer_api.post(text)
 
 
 def label(p, teams):
